@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yeld Weekly Payments</title>
+</head>
+<body>
+  <button type="button" onclick="claimPayment()">Claim weekly payment</button>
+  <div id="time-to-claim">Time to claim: </div>
+  <div id="payment">Your weekly payment: </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.3.4/web3.min.js"></script>
+  <script>
+    const abi = [
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "previousOwner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
+          }
+        ],
+        "name": "OwnershipTransferred",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "Paused",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "Unpaused",
+        "type": "event"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "name": "lastReceivedAmount",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [],
+        "name": "paused",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [],
+        "name": "paymentPeriod",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "name": "receiveAmounts",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "name": "receivers",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [],
+        "name": "renounceOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "newOwner",
+            "type": "address"
+          }
+        ],
+        "name": "transferOwnership",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "yeld",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_yeld",
+            "type": "address"
+          },
+          {
+            "internalType": "address[]",
+            "name": "_receivers",
+            "type": "address[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "_amounts",
+            "type": "uint256[]"
+          }
+        ],
+        "name": "initialize",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address[]",
+            "name": "_receivers",
+            "type": "address[]"
+          },
+          {
+            "internalType": "uint256[]",
+            "name": "_amounts",
+            "type": "uint256[]"
+          }
+        ],
+        "name": "changeReceiverAndAmounts",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_yeld",
+            "type": "address"
+          }
+        ],
+        "name": "setYeld",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "_paymentPeriod",
+            "type": "uint256"
+          }
+        ],
+        "name": "changePaymentPeriod",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getPaid",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "checkPaymentAvailable",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "_token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "_amount",
+            "type": "uint256"
+          }
+        ],
+        "name": "extractTokensIfStuck",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "extractETHIfStruck",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getAllReceivers",
+        "outputs": [
+          {
+            "internalType": "address[]",
+            "name": "",
+            "type": "address[]"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "constant": true
+      }
+    ]
+    const address = '0x72A6Ab7627B72038A3c0f968eF6E3A4BeBbc3D31'
+  </script>
+  <script>
+    const MyWeb3 = Web3
+    let yeldWeeklyClaim
+    let acc
+    const setupContracts = async () => {
+      acc = (await web3.eth.getAccounts())[0]
+      yeldWeeklyClaim = new web3.eth.Contract(
+        abi,
+        address,
+      )
+      let weeklyAmount = await yeldWeeklyClaim.methods.receiveAmounts(acc).call()
+      let lastReceivedAmount = await yeldWeeklyClaim.methods.lastReceivedAmount(acc).call()
+      weeklyAmount = web3.utils.fromWei(weeklyAmount)
+      if (weeklyAmount <= 0) {
+        document.querySelector('#time-to-claim').innerHTML = ``
+        document.querySelector('#payment').innerHTML = `You can't claim any YELD with this account`
+        return
+      }
+      let timeToClaim = lastReceivedAmount + 604800 // secs
+      let now = Date.now() / 1000
+      let timePassed = timeToClaim - now
+      if (timePassed <= 0) {
+        document.querySelector('#time-to-claim').innerHTML = `Ready to claim`
+      } else {
+        document.querySelector('#time-to-claim').innerHTML = `Time to claim: ${timePassed} seconds`
+      }
+      document.querySelector('#payment').innerHTML = `Your weekly payment: ${weeklyAmount} YELD`
+    }
+    const setup = async () => {
+      // Create the contract instance
+      if (typeof window.ethereum !== 'undefined') {
+        window.web3 = new MyWeb3(window.ethereum)
+        let accs
+        try {
+          accs = (await ethereum.send('eth_requestAccounts')).result
+        } catch (error) {
+          alert('You must approve this dApp to interact with it')
+        }
+        window.web3.eth.defaultAccount = accs[0]
+        // TODO remove this in the final dapp when using mainnet
+        if (Number(window.ethereum.networkVersion) != 137) {
+          return alert('You must be connected to the Matic network to use this dapp')
+        }
+        await setupContracts()
+        ethereum.on('accountsChanged', () => {
+          window.location.reload()
+        })
+      } else {
+        alert('You must have metamask installed to use this dApp')
+      }
+    }
+    const claimPayment = async () => {
+      await yeldWeeklyClaim.methods.getPaid().send({
+        from: acc,
+      })
+    }
+    setup()
+  </script>
+</body>
+</html>
